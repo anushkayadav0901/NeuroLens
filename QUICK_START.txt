@@ -1,0 +1,61 @@
+╔════════════════════════════════════════════════════════════╗
+║         NEUROLENS - GENERATE 3D MODELS (WINDOWS)          ║
+╚════════════════════════════════════════════════════════════╝
+
+📋 EASIEST WAY (Double-click):
+   1. Double-click "generate_models.bat"
+   2. Wait for it to finish
+   3. Done!
+
+📋 MANUAL WAY (Command Prompt):
+   1. Open Command Prompt
+   2. Type: cd C:\path\to\your\project
+   3. Type: python src/krishmodel/backend/generate_sample_data.py
+   4. Press Enter
+
+📁 OUTPUT FILES LOCATION:
+   ✓ app/static/tumor.obj  ← 3D tumor mesh
+   ✓ app/static/brain.obj  ← 3D brain mesh
+   ✓ sample_data/volume.npy
+   ✓ sample_data/mask.npy
+
+🎲 GENERATE DIFFERENT TUMORS:
+   Edit: src/krishmodel/backend/generate_sample_data.py
+   Line 62: Change np.random.seed(42) to any number
+   
+   Examples:
+   - np.random.seed(123)  → Different shape
+   - np.random.seed(999)  → Another variation
+   - np.random.seed(777)  → Yet another
+
+📏 CHANGE TUMOR SIZE:
+   Line 59-61: Change the divisor numbers
+   - Smaller numbers = Bigger tumor
+   - Bigger numbers = Smaller tumor
+   
+   Small:  / 15.0, / 13.0, / 12.0
+   Medium: / 12.0, / 10.0, / 9.0  (default)
+   Large:  / 8.0,  / 7.0,  / 6.0
+
+📍 CHANGE TUMOR LOCATION:
+   Line 54-56: Change the multipliers
+   
+   Left temporal:  0.35, 0.55, 0.50  (default)
+   Right frontal:  0.65, 0.45, 0.60
+   Top parietal:   0.50, 0.70, 0.55
+
+⚠️ TROUBLESHOOTING:
+   "python not found" → Install from python.org
+   "No module named..." → Run: pip install numpy scipy scikit-image
+   "Permission denied" → Run Command Prompt as Administrator
+
+💡 TIP: To keep multiple versions:
+   1. Run script
+   2. Rename: move app\static\tumor.obj app\static\tumor_v1.obj
+   3. Change seed
+   4. Run again
+   5. Repeat!
+
+═══════════════════════════════════════════════════════════
+For detailed instructions, see: HOW_TO_RUN_PYTHON_SCRIPT.md
+═══════════════════════════════════════════════════════════

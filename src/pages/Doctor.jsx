@@ -2,21 +2,24 @@ import { useState } from 'react';
 import DoctorNavbar from '../components/DoctorNavbar';
 import UploadPanel from '../components/UploadPanel';
 import ViewerPanel from '../components/ViewerPanel';
+import MRISliceViewer from '../components/MRISliceViewer';
 import SummaryPanel from '../components/SummaryPanel';
 import ChatPanel from '../components/ChatPanel';
+import { getCaseData } from '../utils/caseMapper';
 
 function Doctor() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [highlightTumor, setHighlightTumor] = useState(false);
   const [showWireframe, setShowWireframe] = useState(false);
   const [analysisData, setAnalysisData] = useState(null);
-  const [analysisState, setAnalysisState] = useState('idle'); // 'idle' | 'analyzing' | 'completed'
+  const [analysisState, setAnalysisState] = useState('idle');
+  const [viewMode, setViewMode] = useState('3d');
 
   const handleFileUpload = (file) => {
     setUploadedFile(file);
     setAnalysisData(null);
     setAnalysisState('idle');
-    setHighlightTumor(true); // Auto-enable highlight for new upload
+    setHighlightTumor(true);
   };
 
   const handleReset = () => {
@@ -26,70 +29,15 @@ function Doctor() {
     setHighlightTumor(false);
   };
 
-  const generateAnalysis = (file) => {
-    // Use file properties to generate pseudo-random but consistent results
-    const nameHash = file.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const sizeHash = file.size;
-    
-    // Determine tumor location based on filename
-    const locationIndex = nameHash % 3;
-    const locations = [
-      { 
-        name: 'left temporal',
-        position: { x: -0.6, y: 0.3, z: 0.5 },
-        description: 'left temporal region',
-        criticalArea: 'speech and language processing'
-      },
-      { 
-        name: 'right frontal',
-        position: { x: 0.5, y: 0.4, z: 0.6 },
-        description: 'right frontal lobe',
-        criticalArea: 'motor control and decision-making'
-      },
-      { 
-        name: 'parietal',
-        position: { x: 0.2, y: 0.7, z: -0.3 },
-        description: 'parietal region',
-        criticalArea: 'sensory processing and spatial awareness'
-      }
-    ];
-    
-    // Determine tumor size based on file size
-    const sizeIndex = Math.floor((sizeHash / 100000) % 3);
-    const sizes = [
-      { label: 'Small', diameter: '1.8 cm', scale: 0.2, risk: 'Low' },
-      { label: 'Medium', diameter: '2.3 cm', scale: 0.25, risk: 'Moderate' },
-      { label: 'Large', diameter: '3.1 cm', scale: 0.32, risk: 'High' }
-    ];
-    
-    const location = locations[locationIndex];
-    const size = sizes[sizeIndex];
-    
-    // Generate risk color
-    const riskColors = {
-      'Low': 'text-green-400',
-      'Moderate': 'text-amber-400',
-      'High': 'text-red-400'
-    };
-    
-    return {
-      location,
-      size,
-      riskColor: riskColors[size.risk],
-      timestamp: Date.now()
-    };
-  };
-
   const handleAnalyze = () => {
     if (uploadedFile && analysisState === 'idle') {
       setAnalysisState('analyzing');
       
-      // Simulate processing time (2-3 seconds)
       const processingTime = 2000 + Math.random() * 1000;
       
       setTimeout(() => {
-        const analysis = generateAnalysis(uploadedFile);
-        setAnalysisData(analysis);
+        const caseData = getCaseData(uploadedFile);
+        setAnalysisData(caseData);
         setAnalysisState('completed');
       }, processingTime);
     }
@@ -119,15 +67,44 @@ function Doctor() {
             </div>
           </div>
 
-          {/* CENTER PANEL - 3D Viewer */}
+          {/* CENTER PANEL - Viewer (3D or 2D) */}
           <div className="lg:col-span-5">
-            <div className="h-[600px] lg:h-[calc(100vh-120px)]">
-              <ViewerPanel 
-                showWireframe={showWireframe} 
-                analysisData={analysisData}
-                highlightTumor={highlightTumor}
-                analysisState={analysisState}
-              />
+            {/* View Mode Toggle */}
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={() => setViewMode('3d')}
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  viewMode === '3d'
+                    ? 'bg-accent text-slate-950'
+                    : 'border border-border bg-panel text-slate-300 hover:border-accent'
+                }`}
+              >
+                3D View
+              </button>
+              <button
+                onClick={() => setViewMode('2d')}
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  viewMode === '2d'
+                    ? 'bg-accent text-slate-950'
+                    : 'border border-border bg-panel text-slate-300 hover:border-accent'
+                }`}
+              >
+                2D Slices
+              </button>
+            </div>
+
+            {/* Viewer */}
+            <div className="h-[600px] lg:h-[calc(100vh-180px)]">
+              {viewMode === '3d' ? (
+                <ViewerPanel 
+                  showWireframe={showWireframe} 
+                  analysisData={analysisData}
+                  highlightTumor={highlightTumor}
+                  analysisState={analysisState}
+                />
+              ) : (
+                <MRISliceViewer />
+              )}
             </div>
           </div>
 

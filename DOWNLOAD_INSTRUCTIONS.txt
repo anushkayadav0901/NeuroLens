@@ -1,0 +1,215 @@
+================================================================================
+                    REAL BRATS DATA - DOWNLOAD INSTRUCTIONS
+================================================================================
+
+YOU ARE HERE: Downloading 13GB BraTS 2021 dataset from Kaggle
+
+CURRENT STATUS: ⏳ Downloading...
+
+================================================================================
+                              WHAT TO DO NEXT
+================================================================================
+
+STEP 1: Wait for Download to Complete
+--------------------------------------
+Your Python script is downloading:
+  Dataset: BraTS 2021 Task 1
+  Size: 13 GB
+  Cases: 1,251 brain tumor MRI scans
+  Time: 30-60 minutes
+
+The download path will be printed when complete.
+
+
+STEP 2: Process the Dataset
+----------------------------
+Once download finishes, run:
+
+  python process_brats_dataset.py
+
+This will:
+  ✓ Scan all 1,251 cases
+  ✓ Find cases with visible tumors
+  ✓ Select 7 diverse cases (different tumor sizes)
+  ✓ Copy to your project: data/BraTS_cases/
+  ✓ Setup default case: data/BraTS/
+
+Time: ~5 minutes
+
+
+STEP 3: Generate MRI Slices
+----------------------------
+Run:
+
+  python src/krishmodel/backend/generate_mri_slices.py
+
+This will:
+  ✓ Read REAL BraTS NIfTI files
+  ✓ Extract 155 axial brain slices
+  ✓ Overlay real tumor segmentation
+  ✓ Save to: public/mri_slices/
+
+Time: ~2 minutes
+
+
+STEP 4: View in Your App
+-------------------------
+Run:
+
+  npm run dev
+
+Then:
+  1. Open Doctor Dashboard
+  2. Click "2D Slices" button
+  3. See REAL brain scans!
+
+
+================================================================================
+                              QUICK COMMANDS
+================================================================================
+
+After download completes, run these in order:
+
+  # Process dataset (select best cases)
+  python process_brats_dataset.py
+
+  # Generate slices
+  python src/krishmodel/backend/generate_mri_slices.py
+
+  # Start app
+  npm run dev
+
+
+OR use the automated script:
+
+  setup_real_brats.bat
+
+
+================================================================================
+                           WHAT YOU'LL GET
+================================================================================
+
+BEFORE (Current - Fake Data):
+  ❌ Synthetic sphere brain
+  ❌ Fake blob tumor
+  ❌ 64 slices
+  ❌ Not realistic
+  ❌ File size: ~33 KB
+
+AFTER (Real Data):
+  ✓ Actual patient MRI
+  ✓ Real glioblastoma tumor
+  ✓ 155 slices
+  ✓ Medical-grade quality
+  ✓ File size: ~7-10 MB
+  ✓ Real brain anatomy
+  ✓ Professional visualization
+
+
+================================================================================
+                              FILE STRUCTURE
+================================================================================
+
+After processing, you'll have:
+
+  data/
+  ├── BraTS/                    ← Default case (for quick testing)
+  │   ├── flair.nii.gz         ← REAL MRI scan
+  │   └── seg.nii.gz           ← REAL tumor mask
+  │
+  └── BraTS_cases/              ← 7 selected cases
+      ├── case_001/
+      │   ├── flair.nii.gz
+      │   ├── seg.nii.gz
+      │   └── metadata.json
+      ├── case_002/
+      ├── case_003/
+      ├── case_004/
+      ├── case_005/
+      ├── case_006/
+      └── case_007/
+
+  public/
+  └── mri_slices/               ← Generated PNG slices
+      ├── metadata.json
+      ├── slice_000.png
+      ├── slice_001.png
+      └── ... (155 total)
+
+
+================================================================================
+                           VERIFY IT'S REAL
+================================================================================
+
+Check file size:
+
+  Windows:
+    dir data\BraTS\flair.nii.gz
+
+  Should show: ~7-10 MB (not 33 KB)
+
+
+Check dimensions in Python:
+
+  import nibabel as nib
+  img = nib.load('data/BraTS/flair.nii.gz')
+  print(img.shape)
+
+  Fake data: (64, 64, 64)
+  Real data: (240, 240, 155)  ← You want this!
+
+
+================================================================================
+                            TROUBLESHOOTING
+================================================================================
+
+Problem: Download is stuck
+Solution: Be patient, 13GB takes time. Check internet connection.
+
+Problem: "No module named kagglehub"
+Solution: pip install kagglehub
+
+Problem: "No cases found" after processing
+Solution: Make sure download completed. Check the path printed by kagglehub.
+
+Problem: Slices look wrong
+Solution: 
+  1. Verify files in data/BraTS/
+  2. Check file size (should be ~7-10 MB)
+  3. Re-run generate_mri_slices.py
+
+Problem: Still seeing fake data
+Solution:
+  1. Delete old fake files: del data\BraTS\*.nii.gz
+  2. Run process_brats_dataset.py again
+  3. Regenerate slices
+
+
+================================================================================
+                              NEED HELP?
+================================================================================
+
+If you get stuck, share:
+  1. Output of your kagglehub download script
+  2. Contents of data/BraTS/ folder (dir data\BraTS)
+  3. File sizes
+  4. Any error messages
+
+I'll help you debug!
+
+
+================================================================================
+                           ESTIMATED TIMELINE
+================================================================================
+
+Download dataset:        30-60 minutes  ⏳ YOU ARE HERE
+Process dataset:         5 minutes
+Generate slices:         2 minutes
+View in app:             Instant!
+                         ─────────────
+Total:                   ~45-70 minutes
+
+Result: Production-ready medical imaging app with REAL brain tumor data!
+
+
+================================================================================

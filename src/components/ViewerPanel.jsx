@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { Loader2 } from 'lucide-react';
 
 function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisState }) {
@@ -8,8 +9,8 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
-  const meshRef = useRef(null);
-  const tumorRef = useRef(null);
+  const brainMeshRef = useRef(null);
+  const tumorMeshRef = useRef(null);
   const tumorScaleRef = useRef(0);
   const cameraRef = useRef(null);
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -17,6 +18,88 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
   
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [currentTumorFile, setCurrentTumorFile] = useState(null);
+
+  const loadBrainModel = (scene) => {
+    const loader = new OBJLoader();
+    
+    loader.load(
+      '/models/brain1.obj',
+      (brainObj) => {
+        console.log('✓ Brain model loaded');
+        
+        brainObj.traverse((child) => {
+          if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xa0b0c0,
+              transparent: true,
+              opacity: 0.3,
+              side: THREE.DoubleSide,
+              wireframe: showWireframe,
+            });
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        
+        brainObj.scale.set(0.15, 0.15, 0.15);
+        brainObj.position.set(0, 0, 0);
+        
+        scene.add(brainObj);
+        brainMeshRef.current = brainObj;
+        setModelsLoaded(true);
+      },
+      undefined,
+      (error) => console.error('Error loading brain:', error)
+    );
+  };
+
+  const loadTumorModel = (scene, tumorFile, position) => {
+    if (!tumorFile) return;
+    
+    if (tumorMeshRef.current) {
+      scene.remove(tumorMeshRef.current);
+      tumorMeshRef.current = null;
+    }
+    
+    const loader = new OBJLoader();
+    
+    loader.load(
+      tumorFile,
+      (tumorObj) => {
+        console.log(`✓ Tumor loaded: ${tumorFile}`);
+        
+        tumorObj.traverse((child) => {
+          if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xff6b4a,
+              emissive: 0xff4500,
+              emissiveIntensity: 0.3,
+              roughness: 0.3,
+              metalness: 0.2,
+            });
+            child.castShadow = true;
+            child.userData = { isTumor: true };
+          }
+        });
+        
+        tumorObj.scale.set(0, 0, 0);
+        
+        if (position) {
+          tumorObj.position.set(position.x, position.y, position.z);
+        } else {
+          tumorObj.position.set(0, 0, 0);
+        }
+        
+        scene.add(tumorObj);
+        tumorMeshRef.current = tumorObj;
+        tumorScaleRef.current = 0;
+      },
+      undefined,
+      (error) => console.error('Error loading tumor:', error)
+    );
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,88 +116,64 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
       0.1,
       1000
     );
-    camera.position.z = 3;
+    camera.position.set(0, 0, 15);
     cameraRef.current = camera;
 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Brain placeholder (sphere)
-    const geometry = new THREE.SphereGeometry(1, 64, 64);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xa0b0c0,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.05,
-      roughness: 0.4,
-      metalness: 0.1,
-      wireframe: showWireframe,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-    meshRef.current = mesh;
-
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 5, 5);
+    directionalLight.position.set(10, 10, 10);
+    directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    const pointLight = new THREE.PointLight(0x38bdf8, 0.3);
-    pointLight.position.set(-3, 2, 3);
-    scene.add(pointLight);
+    const pointLight1 = new THREE.PointLight(0x38bdf8, 0.4);
+    pointLight1.position.set(-10, 5, 10);
+    scene.add(pointLight1);
 
-    // Tumor sphere (initially hidden, position will be set dynamically)
-    const tumorSize = analysisData?.size.scale || 0.25;
-    const tumorGeometry = new THREE.SphereGeometry(tumorSize, 32, 32);
-    const tumorMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff6b4a,
-      emissive: 0xff4500,
-      emissiveIntensity: 0.3,
-      roughness: 0.3,
-      metalness: 0.2,
-    });
-    const tumor = new THREE.Mesh(tumorGeometry, tumorMaterial);
-    
-    // Set position from analysis data or default
-    if (analysisData?.location.position) {
-      const pos = analysisData.location.position;
-      tumor.position.set(pos.x, pos.y, pos.z);
-    } else {
-      tumor.position.set(-0.6, 0.3, 0.5);
-    }
-    
-    tumor.scale.set(0, 0, 0); // Start invisible
-    tumor.userData = { isTumor: true }; // Mark for raycasting
-    scene.add(tumor);
-    tumorRef.current = tumor;
+    const pointLight2 = new THREE.PointLight(0x38bdf8, 0.3);
+    pointLight2.position.set(10, -5, -10);
+    scene.add(pointLight2);
+
+    loadBrainModel(scene);
 
     // OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.enablePan = false;
-    controls.minDistance = 1.5;
-    controls.maxDistance = 5;
+    controls.minDistance = 8;
+    controls.maxDistance = 30;
     controlsRef.current = controls;
 
     // Mouse move handler for raycasting
     const handleMouseMove = (event) => {
+      if (!tumorMeshRef.current) return;
+      
       const rect = containerRef.current.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       
-      // Update raycaster
       raycasterRef.current.setFromCamera(mouseRef.current, camera);
-      const intersects = raycasterRef.current.intersectObject(tumor);
+      
+      const intersects = [];
+      tumorMeshRef.current.traverse((child) => {
+        if (child.isMesh) {
+          const childIntersects = raycasterRef.current.intersectObject(child);
+          intersects.push(...childIntersects);
+        }
+      });
       
       if (intersects.length > 0 && tumorScaleRef.current > 0.5 && analysisData) {
-        // Show tooltip
         setTooltipData({
           location: analysisData.location.description,
           size: analysisData.size.diameter,
@@ -126,19 +185,31 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
         });
         
         // Highlight tumor on hover
-        tumor.material.emissiveIntensity = 0.5;
+        tumorMeshRef.current.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.emissiveIntensity = 0.5;
+          }
+        });
       } else {
         setTooltipData(null);
-        if (tumor.material) {
-          tumor.material.emissiveIntensity = 0.3;
+        if (tumorMeshRef.current) {
+          tumorMeshRef.current.traverse((child) => {
+            if (child.isMesh && child.material) {
+              child.material.emissiveIntensity = 0.3;
+            }
+          });
         }
       }
     };
 
     const handleMouseLeave = () => {
       setTooltipData(null);
-      if (tumor.material) {
-        tumor.material.emissiveIntensity = 0.3;
+      if (tumorMeshRef.current) {
+        tumorMeshRef.current.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.emissiveIntensity = 0.3;
+          }
+        });
       }
     };
 
@@ -150,25 +221,33 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       
-      // Slow auto-rotation
-      mesh.rotation.y += 0.002;
-      
-      // Animate tumor appearance/disappearance
-      const targetScale = analysisData && highlightTumor ? 1 : 0;
-      const scaleSpeed = 0.05;
-      
-      if (tumorScaleRef.current < targetScale) {
-        tumorScaleRef.current = Math.min(tumorScaleRef.current + scaleSpeed, targetScale);
-      } else if (tumorScaleRef.current > targetScale) {
-        tumorScaleRef.current = Math.max(tumorScaleRef.current - scaleSpeed, targetScale);
+      // Slow auto-rotation for brain
+      if (brainMeshRef.current) {
+        brainMeshRef.current.rotation.y += 0.001;
       }
       
-      tumor.scale.set(tumorScaleRef.current, tumorScaleRef.current, tumorScaleRef.current);
-      
-      // Subtle pulsing effect when visible
-      if (tumorScaleRef.current > 0) {
-        const pulse = Math.sin(Date.now() * 0.003) * 0.05 + 1;
-        tumor.scale.multiplyScalar(pulse);
+      // Animate tumor appearance/disappearance
+      if (tumorMeshRef.current) {
+        const targetScale = analysisData && highlightTumor ? 0.15 : 0;
+        const scaleSpeed = 0.005;
+        
+        if (tumorScaleRef.current < targetScale) {
+          tumorScaleRef.current = Math.min(tumorScaleRef.current + scaleSpeed, targetScale);
+        } else if (tumorScaleRef.current > targetScale) {
+          tumorScaleRef.current = Math.max(tumorScaleRef.current - scaleSpeed, targetScale);
+        }
+        
+        tumorMeshRef.current.scale.set(
+          tumorScaleRef.current,
+          tumorScaleRef.current,
+          tumorScaleRef.current
+        );
+        
+        // Subtle pulsing effect when visible
+        if (tumorScaleRef.current > 0) {
+          const pulse = Math.sin(Date.now() * 0.003) * 0.02 + 1;
+          tumorMeshRef.current.scale.multiplyScalar(pulse);
+        }
       }
       
       controls.update();
@@ -197,20 +276,31 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
       cancelAnimationFrame(animationId);
       controls.dispose();
       renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-      tumorGeometry.dispose();
-      tumorMaterial.dispose();
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [analysisData, highlightTumor, showWireframe]);
+  }, [showWireframe]);
 
-  // Update wireframe when toggle changes
   useEffect(() => {
-    if (meshRef.current) {
-      meshRef.current.material.wireframe = showWireframe;
+    if (!sceneRef.current || !analysisData) return;
+    
+    const tumorFile = analysisData.tumorFile;
+    const position = analysisData.location?.position;
+    
+    if (tumorFile && tumorFile !== currentTumorFile) {
+      setCurrentTumorFile(tumorFile);
+      loadTumorModel(sceneRef.current, tumorFile, position);
+    }
+  }, [analysisData, currentTumorFile]);
+
+  useEffect(() => {
+    if (brainMeshRef.current) {
+      brainMeshRef.current.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.wireframe = showWireframe;
+        }
+      });
     }
   }, [showWireframe]);
 
@@ -237,6 +327,16 @@ function ViewerPanel({ showWireframe, analysisData, highlightTumor, analysisStat
             {/* Progress bar */}
             <div className="mt-6 w-64 overflow-hidden rounded-full bg-border">
               <div className="h-1 w-full animate-pulse bg-accent" style={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </div>
+          </div>
+        )}
+        
+        {/* Model Loading Indicator */}
+        {!modelsLoaded && analysisState !== 'analyzing' && (
+          <div className="absolute inset-0 z-15 flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 size={32} className="animate-spin text-accent mx-auto" />
+              <p className="mt-2 text-xs text-slate-400">Loading 3D models...</p>
             </div>
           </div>
         )}
